@@ -1,200 +1,235 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title></title>
-  <style>
-    body {
-      margin: 0;
-      background: #020202;
-      cursor: crosshair;
-    }
-
-    canvas {
-      display: block
-    }
-
-    h2 {
-      position: absolute;
-      top: 20%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      color: #fff;
-      font-family: cursive;
-      font-size: 4em;
-      font-weight: 900;
-      -webkit-user-select: none;
-      user-select: none;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>For Hodoa ❤️ Cosmos</title>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Noto+Sans+Arabic:wght@300;600&display=swap" rel="stylesheet">
+    <style>
+        * { -webkit-tap-highlight-color: transparent; outline: none; }
+        body {
+            margin: 0; padding: 0;
+            background: radial-gradient(circle at center, #1a0b2e 0%, #030305 100%);
+            overflow: hidden; height: 100vh;
+            display: flex; justify-content: center; align-items: center;
+            touch-action: none;
+        }
+        .content {
+            position: absolute; text-align: center; z-index: 10;
+            pointer-events: none;
+            backdrop-filter: blur(1px); /* تأثير زجاجي خفيف خلف النص */
+            padding: 20px; border-radius: 20px;
+        }
+        h2 {
+            font-family: 'Dancing Script', cursive; font-size: 3.5rem; margin: 0;
+            background: linear-gradient(45deg, #fff, #ffd1dc, #b19cd9, #fff);
+            background-size: 200% auto;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            animation: shine 5s linear infinite, floating 4s ease-in-out infinite;
+            text-shadow: 0 0 30px rgba(177, 156, 217, 0.5);
+        }
+        .sub-text {
+            font-family: 'Noto Sans Arabic', sans-serif;
+            color: rgba(255, 255, 255, 0.8); font-size: 1.3rem;
+            margin-top: 15px; letter-spacing: 1px;
+            font-weight: 300;
+        }
+        @keyframes shine { to { background-position: 200% center; } }
+        @keyframes floating { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+        canvas { display: block; position: absolute; top: 0; left: 0; }
+    </style>
 </head>
-
 <body>
-  <h2><i style="font-family: Sans-serif">I love yo Hodoa️</i>❤️</h2>
-  <canvas id="birthday"></canvas>
-  <script>
-    // helper functions
-    const PI2 = Math.PI * 2
-    const random = (min, max) => Math.random() * (max - min + 1) + min | 0
-    const timestamp = _ => new Date().getTime()
 
-    // container
-    class Birthday {
-      constructor() {
-        this.resize()
+    <div class="content">
+        <h2>I love you, Hodoa ❤️</h2>
+        <div class="sub-text">بكل هدوء.. أنتي كوكبي الخاص</div>
+    </div>
 
-        // create a lovely place to store the firework
-        this.fireworks = []
-        this.counter = 0
+    <canvas id="canvas"></canvas>
 
-      }
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const PI2 = Math.PI * 2;
+        const random = (min, max) => Math.random() * (max - min) + min;
 
-      resize() {
-        this.width = canvas.width = window.innerWidth
-        let center = this.width / 2 | 0
-        this.spawnA = center - center / 4 | 0
-        this.spawnB = center + center / 4 | 0
+        let width, height;
+        let stars = [];
+        let planets = [];
+        let fireworks = [];
+        let particles = []; 
+        let lastFirework = Date.now();
 
-        this.height = canvas.height = window.innerHeight
-        this.spawnC = this.height * .1
-        this.spawnD = this.height * .5
+        // كلاس الكواكب الاحترافي
+        class Planet {
+            constructor() {
+                this.reset(true);
+            }
+            reset(init = false) {
+                this.r = random(5, 25); // حجم الكوكب
+                this.x = init ? random(0, width) : width + this.r * 2;
+                this.y = random(height * 0.1, height * 0.9);
+                this.vx = random(-0.05, -0.15); // سرعة بطيئة جداً
+                this.color = `hsl(${random(240, 300)}, 70%, ${random(40, 60)}%)`; // ألوان مريحة (أزرق/موف)
+                this.hasRing = Math.random() > 0.6; // بعض الكواكب ليها حلقات
+                this.ringColor = `hsla(${random(200, 320)}, 50%, 80%, 0.3)`;
+                this.angle = random(0, PI2);
+            }
+            update() {
+                this.x += this.vx;
+                if (this.x < -this.r * 3) this.reset();
+            }
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                
+                // 1. رسم الحلقة (خلف الكوكب)
+                if (this.hasRing) {
+                    ctx.save();
+                    ctx.rotate(0.3); // ميل الحلقة
+                    ctx.scale(1, 0.3); // جعلها بيضاوية
+                    ctx.strokeStyle = this.ringColor;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.r * 1.8, 0, PI2);
+                    ctx.stroke();
+                    ctx.restore();
+                }
 
-      }
+                // 2. رسم جسم الكوكب (باستخدام تدرج دائري للظل والنور)
+                let gradient = ctx.createRadialGradient(
+                    -this.r/3, -this.r/3, this.r/10, // نقطة الضوء
+                    0, 0, this.r // حجم الكوكب
+                );
+                gradient.addColorStop(0, '#fff'); // الضوء الأبيض
+                gradient.addColorStop(0.3, this.color); // لون الكوكب الأساسي
+                gradient.addColorStop(1, '#000'); // الظل العميق
 
-      onClick(evt) {
-        let x = evt.clientX || evt.touches && evt.touches[0].pageX
-        let y = evt.clientY || evt.touches && evt.touches[0].pageY
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(0, 0, this.r, 0, PI2);
+                ctx.fill();
 
-        let count = random(3, 5)
-        for (let i = 0; i < count; i++) this.fireworks.push(new Firework(
-          random(this.spawnA, this.spawnB),
-          this.height,
-          x,
-          y,
-          random(0, 260),
-          random(30, 110)))
+                // 3. إضافة ملمس غازي خفيف (Atmospheric effect)
+                ctx.globalAlpha = 0.2;
+                ctx.fillStyle = this.color;
+                ctx.beginPath(); ctx.arc(0, 0, this.r * 1.1, 0, PI2); ctx.fill();
+                ctx.globalAlpha = 1;
 
-        this.counter = -1
-
-      }
-
-      update(delta) {
-        ctx.globalCompositeOperation = 'hard-light'
-        ctx.fillStyle = `rgba(20,20,20,${ 7 * delta })`
-        ctx.fillRect(0, 0, this.width, this.height)
-
-        ctx.globalCompositeOperation = 'lighter'
-        for (let firework of this.fireworks) firework.update(delta)
-
-        // if enough time passed... create new new firework
-        this.counter += delta * 3 // each second
-        if (this.counter >= 1) {
-          this.fireworks.push(new Firework(
-            random(this.spawnA, this.spawnB),
-            this.height,
-            random(0, this.width),
-            random(this.spawnC, this.spawnD),
-            random(0, 360),
-            random(30, 110)))
-          this.counter = 0
+                ctx.restore();
+            }
         }
 
-        // remove the dead fireworks
-        if (this.fireworks.length > 1000) this.fireworks = this.fireworks.filter(firework => !firework.dead)
+        class Star {
+            constructor() { this.reset(); }
+            reset() {
+                this.x = Math.random() * width; this.y = Math.random() * height;
+                this.size = Math.random() * 1.5; this.opacity = Math.random();
+                this.speed = 0.005 + Math.random() * 0.01;
+            }
+            draw() {
+                this.opacity += this.speed;
+                if (this.opacity > 1 || this.opacity < 0) this.speed *= -1;
+                ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, PI2); ctx.fill();
+            }
+        }
 
-      }
-    }
+        class Firework {
+            constructor(x, y, targetX, targetY, shade) {
+                this.x = x; this.y = y; this.targetX = targetX; this.targetY = targetY;
+                this.shade = shade; this.dead = false; this.history = []; this.madeChilds = false;
+                this.velocity = { x: (targetX - x) * 0.02, y: (targetY - y) * 0.02 };
+            }
+            update() {
+                let dist = Math.hypot(this.targetX - this.x, this.targetY - this.y);
+                if (dist > 5) {
+                    this.x += this.velocity.x; this.y += this.velocity.y;
+                    this.history.push({x: this.x, y: this.y});
+                    if (this.history.length > 10) this.history.shift();
+                } else {
+                    if (!this.madeChilds) {
+                        for (let i = 0; i < 25; i++) {
+                            let angle = (PI2 / 25) * i;
+                            particles.push(new Particle(this.x, this.y, this.shade, angle, random(1, 4)));
+                        }
+                        this.madeChilds = true;
+                    }
+                    this.dead = true;
+                }
+            }
+            draw() {
+                ctx.beginPath(); ctx.strokeStyle = `hsl(${this.shade}, 100%, 80%)`;
+                ctx.lineWidth = 2; ctx.moveTo(this.x, this.y);
+                if(this.history.length > 0) ctx.lineTo(this.history[0].x, this.history[0].y);
+                ctx.stroke();
+            }
+        }
 
-    class Firework {
-      constructor(x, y, targetX, targetY, shade, offsprings) {
-        this.dead = false
-        this.offsprings = offsprings
+        class Particle {
+            constructor(x, y, shade, angle, speed) {
+                this.x = x; this.y = y; this.vx = Math.cos(angle) * speed; this.vy = Math.sin(angle) * speed;
+                this.shade = shade; this.life = 1; this.decay = random(0.015, 0.03);
+            }
+            update() { this.x += this.vx; this.y += this.vy; this.vy += 0.02; this.life -= this.decay; }
+            draw() {
+                ctx.fillStyle = `hsla(${this.shade}, 100%, 80%, ${this.life})`;
+                ctx.beginPath(); ctx.arc(this.x, this.y, 1.2, 0, PI2); ctx.fill();
+            }
+        }
 
-        this.x = x
-        this.y = y
-        this.targetX = targetX
-        this.targetY = targetY
+        function createMagicDust(x, y) {
+            for (let i = 0; i < 3; i++) {
+                particles.push({
+                    x: x, y: y, vx: random(-1, 1), vy: random(-1, 1),
+                    life: 1, shade: random(330, 360),
+                    update() { this.x += this.vx; this.y += this.vy; this.life -= 0.02; },
+                    draw() {
+                        ctx.fillStyle = `hsla(${this.shade}, 100%, 90%, ${this.life})`;
+                        ctx.beginPath(); ctx.arc(this.x, this.y, 1, 0, PI2); ctx.fill();
+                    }
+                });
+            }
+        }
 
-        this.shade = shade
-        this.history = []
-      }
-      update(delta) {
-        if (this.dead) return
+        function init() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            stars = []; planets = [];
+            for (let i = 0; i < 150; i++) stars.push(new Star());
+            for (let i = 0; i < 6; i++) planets.push(new Planet()); // عدد قليل من الكواكب للهدوء
+        }
 
-        let xDiff = this.targetX - this.x
-        let yDiff = this.targetY - this.y
-        if (Math.abs(xDiff) > 3 || Math.abs(yDiff) > 3) { // is still moving
-          this.x += xDiff * 2 * delta
-          this.y += yDiff * 2 * delta
+        window.addEventListener('resize', init);
+        window.addEventListener('touchstart', (e) => {
+            const touch = e.touches[0];
+            fireworks.push(new Firework(width/2, height, touch.pageX, touch.pageY, random(330, 360)));
+        });
+        window.addEventListener('touchmove', (e) => createMagicDust(e.touches[0].pageX, e.touches[0].pageY));
 
-          this.history.push({
-            x: this.x,
-            y: this.y
-          })
+        function loop() {
+            ctx.fillStyle = 'rgba(5, 5, 5, 0.2)'; // شفافية الـ trail
+            ctx.fillRect(0, 0, width, height);
 
-          if (this.history.length > 20) this.history.shift()
+            stars.forEach(s => s.draw());
+            planets.forEach(p => { p.update(); p.draw(); }); // رسم الكواكب
 
-        } else {
-          if (this.offsprings && !this.madeChilds) {
-
-            let babies = this.offsprings / 2
-            for (let i = 0; i < babies; i++) {
-              let targetX = this.x + this.offsprings * Math.cos(PI2 * i / babies) | 0
-              let targetY = this.y + this.offsprings * Math.sin(PI2 * i / babies) | 0
-
-              birthday.fireworks.push(new Firework(this.x, this.y, targetX, targetY, this.shade, 0))
-
+            if (Date.now() - lastFirework > 1800) { // ألعاب نارية أبطأ وأهدى
+                fireworks.push(new Firework(random(width*0.1, width*0.9), height, random(width*0.2, width*0.8), random(height*0.1, height*0.4), random(330, 360)));
+                lastFirework = Date.now();
             }
 
-          }
-          this.madeChilds = true
-          this.history.shift()
+            [...fireworks, ...particles].forEach((obj, i, arr) => {
+                obj.update(); obj.draw();
+                if (obj.dead || obj.life <= 0) arr.splice(i, 1);
+            });
+
+            requestAnimationFrame(loop);
         }
 
-        if (this.history.length === 0) this.dead = true
-        else if (this.offsprings) {
-          for (let i = 0; this.history.length > i; i++) {
-            let point = this.history[i]
-            ctx.beginPath()
-            ctx.fillStyle = 'hsl(' + this.shade + ',100%,' + i + '%)'
-            ctx.arc(point.x, point.y, 1, 0, PI2, false)
-            ctx.fill()
-          }
-        } else {
-          ctx.beginPath()
-          ctx.fillStyle = 'hsl(' + this.shade + ',100%,50%)'
-          ctx.arc(this.x, this.y, 1, 0, PI2, false)
-          ctx.fill()
-        }
-
-      }
-    }
-
-    let canvas = document.getElementById('birthday')
-    let ctx = canvas.getContext('2d')
-
-    let then = timestamp()
-
-    let birthday = new Birthday
-    window.onresize = () => birthday.resize()
-    document.onclick = evt => birthday.onClick(evt)
-    document.ontouchstart = evt => birthday.onClick(evt)
-
-    ;
-    (function loop() {
-      requestAnimationFrame(loop)
-
-      let now = timestamp()
-      let delta = now - then
-
-      then = now
-      birthday.update(delta / 1000)
-
-
-    })()
-  </script>
+        init();
+        loop();
+    </script>
 </body>
-
 </html>
